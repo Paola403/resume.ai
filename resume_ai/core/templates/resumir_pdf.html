@@ -50,7 +50,6 @@
 </div>
 
 <script>
-    // --- Lógica JavaScript para Requisição AJAX (Este é o lugar correto) ---
     document.getElementById('summarize-form').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -80,7 +79,6 @@
 
             if (res.status === 200) {
                 // Sucesso
-                // Formata o texto para quebras de linha (<br><br>)
                 document.getElementById('summary-text').innerHTML = res.body.summary.replace(/\n/g, '<br><br>');
                 document.getElementById('summary-result').classList.remove('d-none');
             } else {

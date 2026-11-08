@@ -7,9 +7,9 @@ import uuid
 from datetime import timedelta
 from django.utils import timezone
 
-# Usuário personalizado estendendo AbstractUser
+# Campos adicionais do usuário do sistema.
 class CustomUser(AbstractUser):
-    # Sobrescrevendo o username para remover validações restritivas
+    # O username aceita os valores definidos pela aplicação.
     username = models.CharField(
         max_length=150,
         unique=True,
@@ -28,7 +28,7 @@ class CustomUser(AbstractUser):
         return self.nome_exibicao or self.username
 
     
-# Modelo para armazenar histórico de PDFs gerados pelos usuários
+# Arquivos de resumo associados à conta que fez o envio.
 class PDFHistory(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='historicos')
     arquivo = models.FileField(upload_to='pdfs/')
@@ -37,7 +37,7 @@ class PDFHistory(models.Model):
     def __str__(self):
         return self.arquivo.name
     
-# Modelo para armazenar códigos de redefinição de senha
+# Código temporário usado no fluxo de recuperação de senha.
 class PasswordResetCode(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     code = models.CharField(max_length=6)

@@ -16,9 +16,7 @@ class UserFlowTests(TestCase):
             password="senha123"
         )
 
-    # -------------------------------
-    # TESTE DE CADASTRO
-    # -------------------------------
+    # Cadastro de usuário.
     def test_register_user(self):
         response = self.client.post(reverse("cadastro"), {
             "username": "novo_user",
@@ -32,9 +30,7 @@ class UserFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(User.objects.filter(username="novo_user").exists())
 
-    # -------------------------------
-    # TESTE DE LOGIN
-    # -------------------------------
+    # Login com credenciais válidas.
     def test_login_success(self):
         response = self.client.post(reverse("login"), {
             "username": "paola@example.com",
@@ -43,9 +39,7 @@ class UserFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
 
-    # -------------------------------
-    # TESTE DE LOGIN FALHO
-    # -------------------------------
+    # Login com senha incorreta.
     def test_login_fail(self):
         response = self.client.post(reverse("login"), {
             "username": "paola@example.com",
@@ -55,17 +49,13 @@ class UserFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Por favor, entre com um email  e senha corretos")
 
-    # -------------------------------
-    # TESTE DE LOGOUT
-    # -------------------------------
+    # Encerramento da sessão.
     def test_logout(self):
         self.client.login(username="paola@example.com", password="senha123")
         response = self.client.get(reverse("logout"))
         self.assertEqual(response.status_code, 200) 
         
-    # -------------------------------
-    # TESTE ALTERAÇÃO DE DADOS
-    # -------------------------------
+    # Atualização dos dados da conta.
     def test_update_profile(self):
         self.client.login(username="paola@example.com", password="senha123")
 
@@ -82,9 +72,7 @@ class UserFlowTests(TestCase):
         self.assertEqual(self.user.username, "paola_new")
         self.assertEqual(self.user.email, "novoemail@example.com")
 
-    # -------------------------------
-    # TESTE ALTERAR SENHA LOGADA
-    # -------------------------------
+    # Alteração de senha com sessão ativa.
     def test_change_password(self):
         self.client.login(username="paola@example.com", password="senha123")
 

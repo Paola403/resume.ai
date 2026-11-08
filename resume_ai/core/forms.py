@@ -20,14 +20,14 @@ class CadastroForm(UserCreationForm):
             "password2",
         ]
 
-    # Validação de email único
+    # Evita cadastrar o mesmo e-mail em mais de uma conta.
     def clean_email(self):
         email = self.cleaned_data["email"]
         if User.objects.filter(email=email).exists():
             raise forms.ValidationError("Este e-mail já está cadastrado.")
         return email
 
-    # Salvando todos os campos
+    # Copia os campos extras antes de salvar o usuário.
     def save(self, commit=True):
         user = super().save(commit=False)
 
@@ -41,11 +41,9 @@ class CadastroForm(UserCreationForm):
 
         return user
     
-# ------------------------------------------------------------------------------------------------------------
-
-# Atualização de dados do usuário
+# Formulário de edição dos dados da conta.
 class UpdateUserForm(forms.ModelForm):
-        # Sobrescreve o campo para remover validação nativa
+    # Mantém o campo username com as regras usadas pela aplicação.
     username = forms.CharField(
         required=True,
         label="Nome de Usuário",
@@ -58,7 +56,7 @@ class UpdateUserForm(forms.ModelForm):
         model = User
         fields = ['username', 'nome_completo', 'telefone', 'email']
 
-       # Remove help_text e limitações automáticas do Django
+        # Oculta os textos de ajuda padrão nos campos.
         help_texts = {
             'username': '',
             'email': '',
@@ -70,7 +68,7 @@ class UpdateUserForm(forms.ModelForm):
         if not email or email.strip() == "":
             raise forms.ValidationError("Campo obrigatório vazio.")
 
-        # Verifica se existe outro usuário com este email
+        # O e-mail pode continuar igual ao da conta atual.
         if User.objects.filter(email=email).exclude(id=user_id).exists():
             raise forms.ValidationError("Este e-mail já está em uso por outro usuário.")
 
@@ -84,12 +82,11 @@ class UpdateUserForm(forms.ModelForm):
 
         return username
     
-# ------------------------------------------------------------------------------------------------------------
-# Formulário para redefinição de senha via código
+# Campos usados nos dois fluxos de alteração de senha.
 
 class ChangePasswordForm(forms.Form):
     modo = forms.CharField(widget=forms.HiddenInput(), initial="password")  
-    # valores possíveis: "senha" ou "codigo"
+    # Indica se a validação será feita pela senha atual ou por código.
 
     campo_verificacao = forms.CharField(
         required=False,

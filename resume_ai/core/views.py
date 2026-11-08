@@ -20,8 +20,7 @@ from django.core.mail import send_mail
 import random
 
 
-# --- CONFIGURAÇÃO GLOBAL DO GEMINI (ROBUSTA) ---
-# Carrega a chave de API do .env UMA VEZ
+# O cliente é inicializado uma vez para reutilizar a configuração nas requisições.
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -31,27 +30,23 @@ if API_KEY:
         client = genai.Client(api_key=API_KEY)
         print(">>> Cliente Gemini inicializado com sucesso.")
     except Exception as e:
-        # Se houver erro aqui (chave inválida, problema de conexão, etc.), o cliente será None
+        # Sem um cliente válido, a view retorna indisponibilidade do serviço.
         print(f">>> ERRO CRÍTICO: Falha ao inicializar o cliente Gemini. Detalhe: {e}")
 else:
     print(">>> ERRO DE CONFIGURAÇÃO: GEMINI_API_KEY não foi encontrada no .env.")
-# -----------------------------------------------
 
 User = get_user_model()
 
 
-# --- 1. VIEW DE PÁGINA INICIAL (INDEX) ---
 @login_required
 def index(request):
     return render(request, 'index.html', {'titulo': 'Página Inicial'})
 
-# --- 2. VIEW DE CONFIGURAÇÕES DE CONTA ---
 @login_required
 def configuracoes_conta_view(request):
     """Renderiza o painel de configurações para alterar/excluir conta."""
     return render(request, 'configuracoes.html', {'titulo': 'Configurações de Conta'})
 
-# --- 3. VIEW DE ALTERAÇÃO DE DADOS DO USUÁRIO ---
 @login_required
 def alterar_dados_view(request):
     user = request.user
@@ -67,7 +62,6 @@ def alterar_dados_view(request):
 
     return render(request, 'alterar_dados.html', {'form': form})
 
-# --- 4. VIEW DE EXCLUSÃO DE CONTA ---
 @login_required
 def excluir_conta_view(request):
     if request.method == "POST":
@@ -79,32 +73,28 @@ def excluir_conta_view(request):
 
     return render(request, "confirmar_exclusao.html")
 
-# --- 5. VIEW PÁGINA DE CONTA EXCLUÍDA ---
 def conta_excluida_view(request):
     return render(request, "conta_excluida.html")
 
 
-# --- 6. VIEW DO HISTÓRICO DE RESUMOS ---
 @login_required
 def historico_resumos(request):
     historicos = PDFHistory.objects.filter(user=request.user).order_by('-enviado_em')
     return render(request, 'historico.html', {'historicos': historicos})
 
-# --- 7. VIEW DELETA O PDF DO HISTÓRICO ---
 @login_required
 def deletar_pdf(request, id):
     pdf = get_object_or_404(PDFHistory, id=id, user=request.user)
 
-    # Exclui o arquivo físico
+    # Remove o arquivo do disco antes de apagar o registro.
     if pdf.arquivo and os.path.exists(pdf.arquivo.path):
         os.remove(pdf.arquivo.path)
 
-    pdf.delete()  # Exclui do banco
+    pdf.delete()
 
     return redirect("historico")
 
 
-# --- 8. VIEW DE CADASTRO ---
 class CadastroView(CreateView):
     model = User
     form_class = CadastroForm
@@ -116,33 +106,30 @@ class CadastroView(CreateView):
         return super().dispatch(request, *args, **kwargs)
 
 
-# --- 9 VIEW DE LOGOUT ---
 def logout_page_view(request):
     logout(request)  
     return render(request, 'logout.html')
 
-# -------------------------------------------------------------------------------------------- #
 
-# --- 10. VIEW DE RESUMO PDF ---
 @login_required
 def resumir_pdf_view(request):
-    """Lida com GET (renderiza formulário) e POST (processa resumo com Gemini)."""
+    """Exibe o formulário e processa o PDF enviado para gerar o resumo."""
     
-    # Checagem de Disponibilidade da API
+    # Verifica se a chave da API foi configurada
     if client is None:
         if request.method == 'POST':
             return JsonResponse({'error': 'O serviço de IA está indisponível. Verifique a chave de API.'}, status=503)
         return render(request, 'resumir_pdf.html')
 
     if request.method == 'POST':
-        # 1. Receber PDF
+        # Recebe o arquivo e o idioma escolhido no formulário.
         uploaded_file = request.FILES.get('pdf_file')
         language = request.POST.get('language', 'Português')
 
         if not uploaded_file:
             return JsonResponse({'error': 'Nenhum arquivo PDF enviado.'}, status=400)
 
-        # 2. Extrair texto do PDF
+        # A API recebe o texto extraído, não o arquivo PDF.
         try:
             pdf_reader = pypdf.PdfReader(uploaded_file)
             text = "".join(page.extract_text() or "" for page in pdf_reader.pages)
@@ -153,7 +140,7 @@ def resumir_pdf_view(request):
         if not text.strip():
             return JsonResponse({'error': 'O PDF não contém texto legível.'}, status=400)
 
-        # 3. Chamar a API do Gemini
+        # Monta o prompt e solicita o resumo ao Gemini.
         try:
             prompt = (
                 f"Resuma o seguinte texto de um documento PDF. "
@@ -174,7 +161,7 @@ def resumir_pdf_view(request):
         except Exception as e:
             return JsonResponse({'error': f'Erro ao gerar resumo: {e}'}, status=500)
 
-        # 4. Criar PDF com o resumo gerado
+        # Gera um PDF com o conteúdo retornado pela IA.
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
@@ -188,24 +175,22 @@ def resumir_pdf_view(request):
 
         nome_pdf = f"resumo_{uploaded_file.name.replace('.pdf','')}.pdf"
 
-        # 5. Salvar PDF do resumo no banco
+        # O FileField salva o arquivo e atualiza o registro.
         registro = PDFHistory.objects.create(user=request.user)
         registro.arquivo.save(nome_pdf, pdf_file)
 
-        # 6. Retornar resumo para a tela
+        # A tela recebe o resumo em formato JSON.
         return JsonResponse({'summary': resumo}, status=200)
 
     
     return render(request, 'resumir_pdf.html')
 
-# -------------------------------------------------------------------------------------------- #
 
-# --- 11. VIEW ALTERAR SENHA ---
 @login_required
 def alterar_senha(request):
     user = request.user
 
-    # Quando clicar em "Esqueci minha senha"
+    # Gera um código temporário e envia para o e-mail da conta.
     if "esqueci" in request.GET:
         codigo = str(random.randint(100000, 999999))
         expira = timezone.now() + timezone.timedelta(minutes=10)
@@ -225,7 +210,6 @@ def alterar_senha(request):
         messages.info(request, "Código enviado para seu e-mail!")
         return render(request, "alterar_senha.html", {"modo": "codigo"})
 
-    # POST → tentativa de alterar senha
     if request.method == "POST":
         modo = request.POST.get("modo")
         campo = request.POST.get("campo_verificacao")
@@ -236,7 +220,7 @@ def alterar_senha(request):
             messages.error(request, "As senhas não coincidem.")
             return render(request, "alterar_senha.html", {"modo": modo})
 
-        # --- FLUXO NORMAL (senha atual) ---
+        # Alteração usando a senha atual.
         if modo == "senha":
             if not user.check_password(campo):
                 messages.error(request, "Senha atual incorreta.")
@@ -247,7 +231,7 @@ def alterar_senha(request):
             messages.success(request, "Senha alterada com sucesso!")
             return render(request, "alterar_senha.html", {"modo": "senha"})
 
-        # --- FLUXO COM CÓDIGO POR E-MAIL ---
+        # Recuperação usando o código enviado por e-mail.
         else:
             try:
                 reset = PasswordResetCode.objects.get(user=user)

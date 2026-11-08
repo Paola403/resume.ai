@@ -27,3 +27,7 @@ __pycache__/
 # -----------------
 # Banco de dados padrão SQLite
 db.sqlite3
+# Arquivos gerados durante a execução
+media/
+__pycache__/
+*.py[cod]
