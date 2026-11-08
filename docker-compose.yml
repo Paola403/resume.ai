@@ -1,0 +1,21 @@
+services:
+  resume-ai:
+    build: .
+    container_name: resume-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./resume_ai/.env
+    environment:
+      SQLITE_PATH: /data/db.sqlite3
+      MEDIA_ROOT: /app/media
+    volumes:
+      - sqlite_data:/data
+      - media_data:/app/media
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  sqlite_data:
+  media_data:

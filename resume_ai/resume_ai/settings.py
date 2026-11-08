@@ -12,21 +12,21 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Carrega as configurações locais antes de acessar as variáveis de ambiente.
+load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-nz*+7t^yt!(+do6%%^b1wiv(g$hw1gxru-lbp87h434p&sm3@t'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = []
+# Em produção, defina essas variáveis no ambiente.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-local-development-only')
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
+ALLOWED_HOSTS = os.getenv(
+    'DJANGO_ALLOWED_HOSTS',
+    'localhost,127.0.0.1'
+).split(',')
 
 
 # Application definition
@@ -73,13 +73,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'resume_ai.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
+# O caminho pode apontar para um volume quando a aplicação roda no Docker.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': os.getenv('SQLITE_PATH', str(BASE_DIR / 'db.sqlite3')),
     }
 }
 
@@ -113,12 +111,8 @@ LOGOUT_URL = '/logout/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/logout/'
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+MEDIA_ROOT = Path(os.getenv('MEDIA_ROOT', str(BASE_DIR / 'media')))
 LANGUAGE_CODE = 'pt-br'
-TIME_ZONE = 'America/Sao_Paulo'
-
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
