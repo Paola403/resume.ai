@@ -53,7 +53,7 @@ python manage.py runserver
 - **Python 3**
 - **Django**
 - **HTML + CSS + JavaScript**
-- **OpenAI API (para resumo)**
+- **Gemini AI (para resumo)**
 - **SQLite**
 - **dotenv**
 - **pypdf**
